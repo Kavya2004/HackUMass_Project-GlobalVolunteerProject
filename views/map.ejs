@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Global Volunteer Tracker</title>
+  <link rel="stylesheet" href="./styles/main.css">
+  <style>
+    /* Add some basic styles for the popup */
+    #country-info {
+      display: none;
+      position: fixed;
+      top: 20%;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+      width: 300px;
+      text-align: center;
+      z-index: 1000;
+    }
+
+    #country-info button {
+      margin-top: 10px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px;
+      cursor: pointer;
+    }
+
+    #country-info button:hover {
+      background-color: #45a049;
+    }
+
+    /* Hover effects */
+    svg path:hover {
+      fill: darkorange;
+      cursor: pointer;
+    }
+
+    /* Click effect */
+    .clicked {
+      fill: green;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Navigation Form -->
+  <form class="tab-view tab-view-height-auto" action="/user" method="post">
+    <% users.forEach(function(user) { %>
+      <input type="submit" name="user" value="<%= user.id %>" id="<%= user.id %>">
+      <label for="<%= user.id %>" style="background-color: <%= user.color %>;">
+        <%= user.name %>
+      </label>
+    <% }); %>
+    <input type="submit" name="add" value="new" id="tab">
+    <label for="tab">Add your NGO</label>
+  </form>
+
+  <!-- Add Country Form -->
+  <form action="/add" method="post">
+    <input type="text" name="country" autofocus placeholder="<%= locals.error ? error : 'Enter country name' %>">
+    <button type="submit" style="background-color: <%= color %>;">Add</button>
+  </form>
+
+  <!-- SVG Map -->
+  <section class="ag-canvas">
+    <svg class="ag-canvas_svg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" viewBox="0 0 1008 651">
+      <path id="AE" title="United Arab Emirates" d="M619.874,393.722L6..." data-country="United Arab Emirates" />
+      <path id="US" title="United States" d="M500,300L400..." data-country="United States" />
+      <!-- Add more countries -->
+    </svg>
+  </section>
+
+  <!-- Country Info Popup -->
+  <div id="country-info">
+    <h3 id="country-name"></h3>
+    <button onclick="closePopup()">Close</button>
+  </div>
+
+  <script>
+    // JavaScript to handle hover and click events
+    document.querySelectorAll('svg path').forEach(path => {
+      path.addEventListener('mouseenter', () => {
+        path.classList.add('hovered');
+      });
+      path.addEventListener('mouseleave', () => {
+        path.classList.remove('hovered');
+      });
+      path.addEventListener('click', () => {
+        // Add the "clicked" class to show the clicked effect
+        path.classList.add('clicked');
+        
+        // Show the country info in the popup
+        const countryName = path.getAttribute('data-country');
+        document.getElementById('country-name').textContent = countryName;
+        document.getElementById('country-info').style.display = 'block';
+      });
+    });
+
+    // Close the popup when the button is clicked
+    function closePopup() {
+      document.getElementById('country-info').style.display = 'none';
+    }
+  </script>
+</body>
+</html>
