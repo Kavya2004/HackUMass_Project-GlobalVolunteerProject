@@ -1,33 +1,219 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Global Volunteer Tracker</title>
-  <link rel="stylesheet" href="./styles/main.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Travel Tracker</title>
+    <style>
+        /* General Styles */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+
+        /* User Navigation Styles */
+        .tab-view {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .tab-view input[type="submit"] {
+            display: none;
+        }
+
+        .tab-view label {
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            color: white;
+            transition: opacity 0.3s;
+        }
+
+        .tab-view label:hover {
+            opacity: 0.8;
+        }
+
+        /* Map Styles */
+        .map-container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        svg path {
+            fill: #ccc;
+            stroke: #fff;
+            stroke-width: 1;
+            transition: fill 0.3s;
+            cursor: pointer;
+        }
+
+        svg path:hover {
+            fill: #ffa500 !important;
+        }
+
+        /* Modal Styles */
+        .country-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        
+
+        .success-message {
+            color: #155724;
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 4px;
+            padding: 0.75rem 1.25rem;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .loading-spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+
+        .close-button {
+            position: absolute;
+            right: 1rem;
+            top: 1rem;
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: #666;
+            padding: 0.5rem;
+            line-height: 1;
+        }
+
+        .close-button:hover {
+            color: #333;
+        }
+
+        .info-container {
+            margin-top: 1rem;
+        }
+
+        .info-text {
+            background-color: #f8f8f8;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .add-info-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        textarea {
+            min-height: 100px;
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: vertical;
+        }
+
+        button {
+            padding: 0.5rem 1rem;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+    </style>
 </head>
-
 <body>
-  <form class="tab-view tab-view-height-auto" action="/user" method="post">
-    <% users.forEach(function(user) { %>
-      <input type="submit" name="user" value="<%= user.id %>" id="<%= user.id %>">
-      <label for="<%= user.id %>" style="background-color: <%= user.color %>;">
-        <%= user.name %>
-      </label>
-      <% }); %>
-
+    <!-- User Navigation -->
+    <form class="tab-view" action="/user" method="post">
+        <% users.forEach(function(user) { %>
+            <input type="submit" name="user" value="<%= user.id %>" id="<%= user.id %>">
+            <label for="<%= user.id %>" style="background-color: <%= user.color %>;">
+                <%= user.name %>
+            </label>
+        <% }); %>
         <input type="submit" name="add" value="new" id="tab">
-        <label for="tab">Add Family Member</label>
+        <label for="tab" style="background-color: #666;">Add User</label>
+    </form>
 
-  </form>
+    <!-- Country Modal -->
+    <div id="countryModal" class="country-modal">
+      <div class="modal-content">
+          <span class="close-button" onclick="closeModal()">&times;</span>
+          <h2 id="modalCountryName" data-country-code=""></h2>
+          <div id="errorMessage" class="error-message"></div>
+          <div id="successMessage" class="success-message"></div>
+          <div class="info-container">
+              <div id="existingInfo" class="info-text"></div>
+              <form id="countryInfoForm" class="add-info-form">
+                  <textarea 
+                      id="newInfo" 
+                      placeholder="Add new information about this country..."
+                      maxlength="1000"
+                  ></textarea>
+                  <div style="display: flex; align-items: center;">
+                      <button type="submit">Save Information</button>
+                      <div id="loadingSpinner" class="loading-spinner"></div>
+                  </div>
+              </form>
+          </div>
+      </div>
+  </div>
 
-  <form action="/add" method="post">
-    <input type="text" name="country" autofocus placeholder="<%= locals.error ? error :  'Enter country name'%>">
-    <button type="submit" style="background-color: <%= color %>;">Add</button>
-  </form>
-
-  <section class="ag-canvas">
+  <div class="map-container">
     <svg class="ag-canvas_svg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
       version="1.1" viewBox="0 0 1008 651">
       <path id="AE" title="United Arab Emirates"
@@ -384,24 +570,214 @@
       <path id="ZW" title="Zimbabwe"
         d="M562.709,526.998L561.219,526.697L560.274,527.059L558.917,526.548L557.776,526.516L555.989,525.158L553.821,524.698L552.996,522.803L552.989,521.752L551.788,521.432L548.615,518.177L547.733,516.471L547.169,515.946L546.09,513.602L549.224,513.922L550.135,514.26L551.082,514.192L552.634,512.299L555.073,509.904L556.076,509.676L556.417,508.67L558.014,507.516L560.138,507.12L560.319,508.2L562.658,508.142L563.957,508.754L564.562,509.472L565.896,509.683L567.353,510.617L567.359,514.312L566.813,516.347L566.692,518.55L567.143,519.426L566.826,521.172L566.402,521.443L565.663,523.593z" />
     </svg>
-  </section>
-  <h2 class="total-count">Total Countries: <%=total%>
-  </h2>
-  <br>
-  <h2>Countries: <%=countries%>
-  </h2>
+  </div>
   <script>
-    let country_codes = "<%= countries %>".split(",");
-    console.log(typeof "<%= countries %>"); // Logs the type of the string
-    console.log(country_codes); // Logs the array of country codes
+    document.addEventListener('DOMContentLoaded', function() {
+    // Color visited countries
+    const visitedCountries = <%- JSON.stringify(countries) %>;
+    const userColor = '<%= color %>';
     
-    country_codes.forEach(code => {
-      let element = document.getElementById(code);
-      if (element) {
-        element.style.fill = "<%= color %>";
-      }
+    visitedCountries.forEach(code => {
+        const element = document.getElementById(code);
+        if (element) {
+            element.style.fill = userColor;
+        }
     });
-  </script>  
-</body>
 
+    // Add click handlers to all country paths
+    document.querySelectorAll('path').forEach(path => {
+        path.addEventListener('click', function(e) {
+            e.preventDefault();
+            const countryCode = this.id;
+            const countryName = this.getAttribute('title');
+            if (countryCode && countryName) {
+                openCountryModal(countryCode, countryName);
+            }
+        });
+    });
+
+    // Handle form submission
+    document.getElementById('countryInfoForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const countryCode = document.getElementById('modalCountryName').dataset.countryCode;
+            const newInfo = document.getElementById('newInfo').value;
+            const submitButton = this.querySelector('button[type="submit"]');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const errorMessage = document.getElementById('errorMessage');
+            const successMessage = document.getElementById('successMessage');
+            
+            // Reset messages
+            errorMessage.style.display = 'none';
+            successMessage.style.display = 'none';
+
+            if (!newInfo.trim()) {
+                errorMessage.textContent = 'Please enter some information before saving.';
+                errorMessage.style.display = 'block';
+                return;
+            }
+
+            try {
+                // Show loading state
+                submitButton.disabled = true;
+                loadingSpinner.style.display = 'inline-block';
+                
+                const response = await fetch('/add-country-info', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        countryCode: countryCode,
+                        info: newInfo.trim()
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to save information');
+                }
+
+                // Show success message
+                successMessage.textContent = 'Information saved successfully!';
+                successMessage.style.display = 'block';
+                
+                // Clear input and refresh display
+                document.getElementById('newInfo').value = '';
+                await fetchAndDisplayCountryInfo(countryCode);
+
+            } catch (error) {
+                console.error('Error saving country info:', error);
+                errorMessage.textContent = `Error: ${error.message}`;
+                errorMessage.style.display = 'block';
+            } finally {
+                // Reset loading state
+                submitButton.disabled = false;
+                loadingSpinner.style.display = 'none';
+            }
+        });
+    });
+
+    // Improved country info fetching
+    async function fetchAndDisplayCountryInfo(countryCode) {
+        const existingInfo = document.getElementById('existingInfo');
+        const errorMessage = document.getElementById('errorMessage');
+        
+        try {
+            existingInfo.textContent = 'Loading...';
+            errorMessage.style.display = 'none';
+
+            const response = await fetch(`/country-info/${countryCode}`);
+            
+            if (!response.ok) {
+                throw new Error('Failed to fetch country information');
+            }
+            
+            const data = await response.json();
+            
+            if (!data.success) {
+                throw new Error(data.error || 'Failed to load information');
+            }
+
+            existingInfo.textContent = data.info || 'No information available yet.';
+        } catch (error) {
+            console.error('Error fetching country info:', error);
+            errorMessage.style.display = 'block';
+            existingInfo.textContent = '';
+        }
+    }
+
+    // Improved modal handling
+    function openCountryModal(countryCode, countryName) {
+        const modal = document.getElementById('countryModal');
+        const modalTitle = document.getElementById('modalCountryName');
+        const errorMessage = document.getElementById('errorMessage');
+        const successMessage = document.getElementById('successMessage');
+        
+        // Reset state
+        modalTitle.textContent = countryName;
+        modalTitle.dataset.countryCode = countryCode;
+        document.getElementById('newInfo').value = '';
+        errorMessage.style.display = 'none';
+        successMessage.style.display = 'none';
+        
+        modal.style.display = 'block';
+        fetchAndDisplayCountryInfo(countryCode);
+    }
+
+    function closeModal() {
+        const modal = document.getElementById('countryModal');
+        const errorMessage = document.getElementById('errorMessage');
+        const successMessage = document.getElementById('successMessage');
+        
+        modal.style.display = 'none';
+        errorMessage.style.display = 'none';
+        successMessage.style.display = 'none';
+    }
+
+
+    window.onclick = function(event) {
+const modal = document.getElementById('countryModal');
+if (event.target === modal) {
+    closeModal();
+}
+};
+
+document.getElementById('countryInfoForm').addEventListener('submit', async function(e) {
+e.preventDefault();
+
+const countryCode = document.getElementById('modalCountryName').dataset.countryCode;
+const newInfo = document.getElementById('newInfo').value;
+
+if (!newInfo.trim()) {
+alert('Please enter some information before saving.');
+return;
+}
+
+try {
+const response = await fetch('/add-country-info', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    countryCode: countryCode,
+    info: newInfo.trim()
+  })
+});
+
+const data = await response.json();
+
+if (!response.ok) {
+  throw new Error(data.error || 'Failed to save information');
+}
+
+// Clear the input and refresh the displayed info
+document.getElementById('newInfo').value = '';
+await fetchAndDisplayCountryInfo(countryCode);
+} catch (error) {
+console.error('Error saving country info:', error);
+alert(`Failed to save information: ${error.message}`);
+}
+});
+
+// Improved fetchAndDisplayCountryInfo function
+async function fetchAndDisplayCountryInfo(countryCode) {
+const existingInfo = document.getElementById('existingInfo');
+try {
+const response = await fetch(`/country-info/${countryCode}`);
+if (!response.ok) {
+  throw new Error('Failed to fetch country information');
+}
+
+const data = await response.json();
+existingInfo.textContent = data.info || 'No information available yet.';
+} catch (error) {
+
+}
+}
+
+</script>
+</body>
 </html>
